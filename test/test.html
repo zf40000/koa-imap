@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app">
+        <button @click="post">testPost</button>
+        <button @click="getMailboxes">获得文件夹</button>
+        <button @click="getMails">获取邮件列表</button>
+        <button @click="getMail">刷新单个邮件</button>
+        <button @click="appenMail">草稿箱保存新邮件</button>
+        <div>文件夹列表:{{boxes}}</div>
+        <div>当前邮件:{{mail}}</div>
+        <div>
+            <div v-for="item,index in mails" :key="index">
+                from :{{item.from}} to:{{item.to}} subject:{{item.subject}} flags:{{item.flags}}
+                <button @click="addFlagged(item.uid)">增加Flagged标记</button>
+                <button @click="delFlagged(item.uid)">删除Flagged标记</button>
+            </div>
+        </div>
+    </div>
+    <script src="./vue.js"></script>
+    <script src="./axios.min.js"></script>
+    <script>
+        const app = new Vue({
+            el: '#app',
+            data: {
+                params:{a:'aa',b:'bb'},
+                res:{},
+                boxes:[],
+                mails:[],
+                mail:{},
+            },
+            methods:{                
+                post() {
+                    axios.post("http://localhost:3000/post",{params:this.params}).then(res=>{
+                        console.log('post 返回',res);
+                    })
+                },
+                getMailboxes() {
+                    axios.post("http://localhost:3000/getMailboxes",{}).then(({data})=>{
+                        console.log('服务器response:',data);
+                        this.boxes = Object.keys(data.boxes);
+                    })
+                },
+                getMails() {
+                    axios.post("http://localhost:3000/getMails",{boxName:'INBOX',filter:''}).then(({data})=>{
+                        console.log('服务器response:',data);
+                        this.mails = data.mails;
+                    })
+                },
+                getMail() {
+                    axios.post("http://localhost:3000/getMail",{boxName:'INBOX',uid:1658475939}).then(({data})=>{
+                        console.log('服务器response:',data);
+                        this.mail = data.mail;
+                    })
+                },
+                appenMail() {
+                    axios.post("http://localhost:3000/appendMail",{}).then(({data})=>{
+                        console.log('服务器response:',data);
+                    })
+                },
+                addFlagged(uid) {
+                    //改变标记
+                    // console.log('改变flagged标记',uid);
+                    const boxName='INBOX';
+                    const uids=[uid];
+                    const flags = ['Flagged'];
+                    axios.post("http://localhost:3000/addFlags",{boxName,uids,flags}).then((res)=>{
+                        console.log('addFlagged',res);                        
+                        //重新获取邮件内容
+                        axios.post("http://localhost:3000/getMail",{boxName:'INBOX',uid}).then(({data})=>{
+                            console.log('reload mail:',data.mail);
+                            for(const key in this.mails) {
+                                const item = this.mails[key];
+                                if(item.uid==uid) {
+                                    this.mails[key] = data.mail;
+                                    break;
+                                }
+                            }
+                        })
+                    })
+                    
+                },
+                delFlagged(uid) {
+                    //改变标记
+                    // console.log('改变flagged标记',uid);
+                    const boxName='INBOX';
+                    const uids=[uid];
+                    const flags = ['Flagged'];
+                    axios.post("http://localhost:3000/delFlags",{boxName,uids,flags}).then((res)=>{
+                        console.log('delFlagged',res);                        
+                        //重新获取邮件内容
+                        axios.post("http://localhost:3000/getMail",{boxName:'INBOX',uid}).then(({data})=>{
+                            console.log('reload mail:',data.mail);
+                            for(const key in this.mails) {
+                                const item = this.mails[key];
+                                if(item.uid==uid) {
+                                    this.mails[key] = data.mail;
+                                    break;
+                                }
+                            }
+                        })
+                    })
+                    
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
